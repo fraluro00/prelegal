@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Mutual Non-Disclosure Agreement",
+    "description": "Standard mutual NDA for sharing confidential information between two parties under equal obligations.",
+    "filename": "Mutual-NDA.md"
+  },
+  {
+    "name": "Mutual NDA Cover Page",
+    "description": "Cover page template to accompany the Common Paper Mutual NDA, capturing key deal terms.",
+    "filename": "Mutual-NDA-coverpage.md"
+  },
+  {
+    "name": "Cloud Service Agreement",
+    "description": "Standard agreement for SaaS and cloud-based software products, covering subscription terms, data handling, and service commitments.",
+    "filename": "CSA.md"
+  },
+  {
+    "name": "Design Partner Agreement",
+    "description": "Standard agreement for early-stage product development partnerships where a customer tests pre-release software in exchange for feedback.",
+    "filename": "design-partner-agreement.md"
+  },
+  {
+    "name": "Service Level Agreement",
+    "description": "Standard SLA defining uptime commitments, measurement methodology, and service credits for failures to meet targets.",
+    "filename": "sla.md"
+  },
+  {
+    "name": "Professional Services Agreement",
+    "description": "Standard agreement for consulting and professional services engagements, covering deliverables, IP ownership, and payment terms.",
+    "filename": "psa.md"
+  },
+  {
+    "name": "Data Processing Agreement",
+    "description": "Standard DPA for GDPR-compliant data handling, defining processor obligations, sub-processor rules, and data subject rights.",
+    "filename": "DPA.md"
+  },
+  {
+    "name": "Software License Agreement",
+    "description": "Standard agreement for licensing software products on a perpetual or subscription basis, covering permitted use, restrictions, and warranties.",
+    "filename": "Software-License-Agreement.md"
+  },
+  {
+    "name": "Partnership Agreement",
+    "description": "Standard agreement for business partnerships and referral relationships, covering revenue sharing, responsibilities, and term.",
+    "filename": "Partnership-Agreement.md"
+  },
+  {
+    "name": "Pilot Agreement",
+    "description": "Standard agreement for time-limited product trials and evaluations before a full commercial commitment.",
+    "filename": "Pilot-Agreement.md"
+  },
+  {
+    "name": "Business Associate Agreement",
+    "description": "Standard BAA for HIPAA-compliant sharing and processing of protected health information between covered entities and business associates.",
+    "filename": "BAA.md"
+  },
+  {
+    "name": "AI Addendum",
+    "description": "Standard addendum to add AI-specific terms (acceptable use, data training opt-outs, output ownership) to existing commercial agreements.",
+    "filename": "AI-Addendum.md"
+  }
+]
