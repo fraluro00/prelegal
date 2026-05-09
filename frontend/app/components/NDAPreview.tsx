@@ -8,7 +8,7 @@ interface FieldProps {
 }
 
 function Field({ value, fallback }: FieldProps) {
-  if (value) {
+  if (value.trim()) {
     return (
       <span className="bg-yellow-100 text-gray-900 font-medium px-0.5 rounded">
         {value}
@@ -205,9 +205,13 @@ export default function NDAPreview({ data }: Props) {
                     </td>
                   </tr>
                   <tr>
-                    <td className="border border-gray-300 px-3 py-4 font-medium">Date</td>
-                    <td className="border border-gray-300 px-3 py-4"></td>
-                    <td className="border border-gray-300 px-3 py-4"></td>
+                    <td className="border border-gray-300 px-3 py-2 font-medium">Date</td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">
+                      <Field value={effectiveDateDisplay} fallback="" />
+                    </td>
+                    <td className="border border-gray-300 px-3 py-2 text-center">
+                      <Field value={effectiveDateDisplay} fallback="" />
+                    </td>
                   </tr>
                 </tbody>
               </table>
