@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation. PL-5 replaced the static form with an AI chat interface (see Implementation Status below).
+The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation. PL-5 replaced the static form with an AI chat interface. PL-6 expanded to all 12 supported document types with a catalog landing page.
 
 ## Development process
 
@@ -49,9 +49,9 @@ Backend available at http://localhost:8000
 ## Implementation Status
 
 ### PL-3 — Mutual NDA Creator (done)
-- `frontend/app/page.tsx` — NDA form + live preview, download .md, print to PDF
-- `frontend/app/components/NDAForm.tsx`, `NDAPreview.tsx`
-- `frontend/app/lib/types.ts`, `download.ts`
+- `frontend/app/components/NDAForm.tsx`, `NDAPreview.tsx` — NDA form + live preview (full Standard Terms prose)
+- `frontend/app/lib/types.ts` — `NDAFormData` type + defaults
+- `frontend/app/lib/download.ts` — NDA markdown generation + download
 
 ### PL-4 — V1 Technical Foundation (done, PR #4)
 - `backend/` — FastAPI uv project; SQLite DB init on startup; static file serving
@@ -63,17 +63,25 @@ Backend available at http://localhost:8000
 - `scripts/` — start/stop for Mac, Linux, Windows
 
 ### PL-5 — AI Chat Interface (done)
-- `backend/app/chat.py` — `POST /api/chat`; LiteLLM + OpenRouter/Cerebras (`gpt-oss-120b`); structured output (`AIResponse`) extracts field updates from conversation
+- `backend/app/chat.py` — `POST /api/chat`; LiteLLM + OpenRouter/Cerebras (`gpt-oss-120b`); structured output (`AIResponse`) with dynamic fields dict
 - `backend/app/main.py` — mounts chat router; loads `.env` via `python-dotenv`
-- `frontend/app/components/ChatPanel.tsx` — freeform chat UI; AI sends opening message on load; each reply updates `NDAFormData` fields in real time
-- `frontend/app/page.tsx` — Chat / Edit Fields tabs; warning dialog before download/print when required fields are blank
+- `frontend/app/components/ChatPanel.tsx` — generic chat UI; AI sends opening message on load; replies update document fields in real time; input refocuses after each reply
 - `frontend/.env.local` — `NEXT_PUBLIC_API_URL` (configurable API base URL, default `http://localhost:8000`)
 - `Dockerfile` — accepts `NEXT_PUBLIC_API_URL` as build ARG
 - `scripts/start-mac.sh` — passes `--env-file .env` to `docker run`
 
+### PL-6 — All Document Types (done, PR #6)
+- `frontend/app/page.tsx` — catalog landing page (doc picker grid); routes to NDA-specific or generic editor per selection; Back button returns to catalog
+- `frontend/app/lib/documents.ts` — field definitions for all 12 document types (single source of truth for frontend)
+- `frontend/app/components/DocumentCatalog.tsx` — responsive 3-column catalog grid
+- `frontend/app/components/DocumentForm.tsx` — generic field form for non-NDA documents
+- `frontend/app/components/DocumentPreview.tsx` — generic field preview with fill-progress bar for non-NDA documents
+- `backend/app/chat.py` — `DOC_FIELDS` + `DOC_NAMES` per document; `build_system_prompt()` constructs dynamic prompts; `ChatRequest` now includes `document_type`; `AIResponse.fields` is a plain `dict` (not typed Pydantic model)
+- AI handles unsupported document requests by explaining and suggesting the closest supported alternative
+- NDA retains its rich custom preview (`NDAPreview`) and full markdown download; all other docs use the generic components
+
 ### Not yet implemented
 - User authentication (sign up / sign in endpoints)
-- Support for documents beyond Mutual NDA
 
 ## Color Scheme
 - Accent Yellow: `#ecad0a`
