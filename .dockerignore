@@ -1,0 +1,9 @@
+**/.git
+**/.next
+**/node_modules
+frontend/out
+backend/.venv
+backend/prelegal.db
+**/__tests__
+**/playwright-report
+**/test-results
