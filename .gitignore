@@ -123,3 +123,4 @@ Desktop.ini
 *.cert
 *.crt
 secrets/
+.claude/settings.local.json
