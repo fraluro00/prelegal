@@ -1,4 +1,4 @@
-import { NDAFormData } from './types';
+import { DocumentConfig, DocumentFields, NDAFormData } from './types';
 
 function escapeMd(s: string): string {
   return s.replace(/[\\`*_|]/g, '\\$&');
@@ -110,11 +110,38 @@ Common Paper Mutual Non-Disclosure Agreement [Version 1.0](https://commonpaper.c
 
 export function downloadMarkdown(data: NDAFormData): void {
   const content = generateMarkdown(data);
+  triggerDownload(content, 'mutual-nda.md');
+}
+
+export function downloadGenericMarkdown(config: DocumentConfig, fields: DocumentFields): void {
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const lines = [
+    `# ${config.name}`,
+    '',
+    `*Generated on ${today}*`,
+    '',
+    '---',
+    '',
+  ];
+
+  for (const field of config.fields) {
+    const raw = fields[field.key];
+    const value = raw != null ? String(raw).trim() : '';
+    lines.push(`## ${field.label}`);
+    lines.push(value || '*[Not specified]*');
+    lines.push('');
+  }
+
+  const filename = config.filename.replace(/\.md$/, '-filled.md');
+  triggerDownload(lines.join('\n'), filename);
+}
+
+function triggerDownload(content: string, filename: string): void {
   const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'mutual-nda.md';
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
