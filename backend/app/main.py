@@ -1,11 +1,15 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .chat import router as chat_router
 from .database import init_db
+
+load_dotenv()
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 
@@ -17,6 +21,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(chat_router)
 
 
 @app.get("/api/health")
