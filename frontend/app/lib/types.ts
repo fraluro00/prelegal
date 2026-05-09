@@ -35,3 +35,21 @@ export const defaultFormData: NDAFormData = {
   party2Company: '',
   party2Address: '',
 };
+
+export interface DocumentField {
+  key: string;
+  label: string;
+  description: string;
+  type: 'text' | 'date' | 'textarea';
+  required: boolean;
+  placeholder?: string;
+}
+
+export interface DocumentConfig {
+  filename: string;
+  name: string;
+  description: string;
+  fields: DocumentField[];
+}
+
+export type DocumentFields = Record<string, string>;

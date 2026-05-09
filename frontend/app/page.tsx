@@ -2,64 +2,111 @@
 
 import { useState } from 'react';
 import ChatPanel from './components/ChatPanel';
+import DocumentCatalog from './components/DocumentCatalog';
+import DocumentForm from './components/DocumentForm';
+import DocumentPreview from './components/DocumentPreview';
 import NDAForm from './components/NDAForm';
 import NDAPreview from './components/NDAPreview';
-import { NDAFormData, defaultFormData } from './lib/types';
-import { downloadMarkdown } from './lib/download';
+import { getDocConfig, isNDADoc } from './lib/documents';
+import { downloadGenericMarkdown, downloadMarkdown } from './lib/download';
+import { DocumentFields, NDAFormData, defaultFormData } from './lib/types';
 
-const REQUIRED_FIELDS: (keyof NDAFormData)[] = [
+const NDA_REQUIRED: (keyof NDAFormData)[] = [
   'purpose', 'effectiveDate', 'governingLaw', 'jurisdiction',
   'party1Name', 'party1Company', 'party2Name', 'party2Company',
 ];
 
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function Home() {
-  const [formData, setFormData] = useState<NDAFormData>({
-    ...defaultFormData,
-    effectiveDate: (() => {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    })(),
-  });
+  const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
+  const [ndaData, setNdaData] = useState<NDAFormData>({ ...defaultFormData, effectiveDate: todayISO() });
+  const [genericFields, setGenericFields] = useState<DocumentFields>({});
   const [activeTab, setActiveTab] = useState<'chat' | 'fields'>('chat');
   const [showIncompleteWarning, setShowIncompleteWarning] = useState(false);
   const [pendingAction, setPendingAction] = useState<'download' | 'print' | null>(null);
 
+  if (!selectedDoc) {
+    return (
+      <DocumentCatalog
+        onSelect={(filename) => {
+          setSelectedDoc(filename);
+          setGenericFields({});
+          setActiveTab('chat');
+        }}
+      />
+    );
+  }
+
+  const docConfig = getDocConfig(selectedDoc);
+  const useNDA = isNDADoc(selectedDoc);
+
   function isComplete(): boolean {
-    return REQUIRED_FIELDS.every((k) => !!formData[k]);
+    if (useNDA) return NDA_REQUIRED.every((k) => !!ndaData[k]);
+    if (!docConfig) return false;
+    return docConfig.fields.filter((f) => f.required).every((f) => !!genericFields[f.key]?.trim());
   }
 
   function handleDownload() {
-    if (!isComplete()) {
-      setPendingAction('download');
-      setShowIncompleteWarning(true);
-    } else {
-      downloadMarkdown(formData);
-    }
+    if (!isComplete()) { setPendingAction('download'); setShowIncompleteWarning(true); return; }
+    executeDownload();
   }
 
   function handlePrint() {
-    if (!isComplete()) {
-      setPendingAction('print');
-      setShowIncompleteWarning(true);
-    } else {
-      window.print();
+    if (!isComplete()) { setPendingAction('print'); setShowIncompleteWarning(true); return; }
+    window.print();
+  }
+
+  function executeDownload() {
+    if (useNDA) {
+      downloadMarkdown(ndaData);
+    } else if (docConfig) {
+      downloadGenericMarkdown(docConfig, genericFields);
     }
   }
 
   function confirmAction() {
     setShowIncompleteWarning(false);
-    if (pendingAction === 'download') downloadMarkdown(formData);
+    if (pendingAction === 'download') executeDownload();
     if (pendingAction === 'print') window.print();
     setPendingAction(null);
   }
 
+  const chatFields = useNDA
+    ? (ndaData as unknown as Record<string, unknown>)
+    : (genericFields as Record<string, unknown>);
+
+  function onChatFieldsChange(updated: Record<string, unknown>) {
+    if (useNDA) {
+      setNdaData(updated as unknown as NDAFormData);
+    } else {
+      setGenericFields(updated as DocumentFields);
+    }
+  }
+
+  const docName = docConfig?.name ?? selectedDoc;
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      {/* Header */}
       <header className="no-print bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <div>
-          <h1 className="text-lg font-bold" style={{ color: '#032147' }}>Mutual NDA Creator</h1>
-          <p className="text-xs text-gray-500">Prelegal &mdash; Common Paper Mutual NDA v1.0</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSelectedDoc(null)}
+            className="text-gray-400 hover:text-gray-600 transition-colors text-sm flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <div className="w-px h-5 bg-gray-200" />
+          <div>
+            <h1 className="text-lg font-bold leading-tight" style={{ color: '#032147' }}>{docName}</h1>
+            <p className="text-xs text-gray-500">Prelegal &mdash; AI-powered document drafting</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
@@ -84,55 +131,57 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main split layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left panel */}
         <aside className="no-print w-96 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col">
-          {/* Tabs */}
           <div className="flex border-b border-gray-200 flex-shrink-0">
             <button
               onClick={() => setActiveTab('chat')}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'chat'
-                  ? 'border-b-2 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'chat' ? 'border-b-2' : 'text-gray-500 hover:text-gray-700'}`}
               style={activeTab === 'chat' ? { borderBottomColor: '#209dd7', color: '#209dd7' } : {}}
             >
               Chat
             </button>
             <button
               onClick={() => setActiveTab('fields')}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
-                activeTab === 'fields'
-                  ? 'border-b-2 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
+              className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'fields' ? 'border-b-2' : 'text-gray-500 hover:text-gray-700'}`}
               style={activeTab === 'fields' ? { borderBottomColor: '#209dd7', color: '#209dd7' } : {}}
             >
               Edit Fields
             </button>
           </div>
 
-          {/* Tab content */}
           <div className="flex-1 overflow-hidden">
-            {activeTab === 'chat' ? (
-              <ChatPanel fields={formData} onFieldsChange={setFormData} />
-            ) : (
-              <div className="overflow-y-auto h-full">
-                <NDAForm data={formData} onChange={setFormData} />
-              </div>
-            )}
+            {/* Always mounted so conversation survives tab switches */}
+            <div className={activeTab === 'chat' ? 'h-full' : 'hidden'}>
+              <ChatPanel
+                fields={chatFields}
+                onFieldsChange={onChatFieldsChange}
+                documentType={selectedDoc}
+              />
+            </div>
+            <div className={activeTab === 'fields' ? 'overflow-y-auto h-full' : 'hidden'}>
+              {useNDA ? (
+                <NDAForm data={ndaData} onChange={setNdaData} />
+              ) : docConfig ? (
+                <DocumentForm
+                  config={docConfig}
+                  fields={genericFields}
+                  onChange={setGenericFields}
+                />
+              ) : null}
+            </div>
           </div>
         </aside>
 
-        {/* Preview panel */}
         <main className="flex-1 overflow-y-auto bg-gray-50 px-8 py-10">
-          <NDAPreview data={formData} />
+          {useNDA ? (
+            <NDAPreview data={ndaData} />
+          ) : docConfig ? (
+            <DocumentPreview config={docConfig} fields={genericFields} />
+          ) : null}
         </main>
       </div>
 
-      {/* Incomplete fields warning dialog */}
       {showIncompleteWarning && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
