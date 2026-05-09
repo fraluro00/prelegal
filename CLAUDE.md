@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation (see Implementation Status below).
+The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation. PL-5 replaced the static form with an AI chat interface (see Implementation Status below).
 
 ## Development process
 
@@ -62,9 +62,17 @@ Backend available at http://localhost:8000
 - `Dockerfile` — multi-stage: Node → static `out/`, Python/uv → FastAPI server
 - `scripts/` — start/stop for Mac, Linux, Windows
 
+### PL-5 — AI Chat Interface (done)
+- `backend/app/chat.py` — `POST /api/chat`; LiteLLM + OpenRouter/Cerebras (`gpt-oss-120b`); structured output (`AIResponse`) extracts field updates from conversation
+- `backend/app/main.py` — mounts chat router; loads `.env` via `python-dotenv`
+- `frontend/app/components/ChatPanel.tsx` — freeform chat UI; AI sends opening message on load; each reply updates `NDAFormData` fields in real time
+- `frontend/app/page.tsx` — Chat / Edit Fields tabs; warning dialog before download/print when required fields are blank
+- `frontend/.env.local` — `NEXT_PUBLIC_API_URL` (configurable API base URL, default `http://localhost:8000`)
+- `Dockerfile` — accepts `NEXT_PUBLIC_API_URL` as build ARG
+- `scripts/start-mac.sh` — passes `--env-file .env` to `docker run`
+
 ### Not yet implemented
 - User authentication (sign up / sign in endpoints)
-- AI chat for document drafting
 - Support for documents beyond Mutual NDA
 
 ## Color Scheme
