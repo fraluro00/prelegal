@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-Before we start: the initial implementation is frontend-only prototype that only supports the Mutual NDA document with no AI chat.
+The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation (see Implementation Status below).
 
 ## Development process
 
@@ -26,12 +26,11 @@ There is an OPENROUTER_API_KEY in the .env file in the project root.
 
 ## Technical design
 
-The entire project should be packaged into a Docker container.  
-The backend should be in backend/ and be a uv project, using FastAPI.  
-The database should use SQLLite and be created from scratch each time the Docker container is brought up, allowing for a users table with sign up and sign in.  
-The frontend should be in frontend/  
-Consider statically building the frontend and serving it via FastAPI, if that will work.  
-There should be scripts in scripts/ for:  
+The entire project is packaged into a Docker container (multi-stage build: Node builds static frontend, Python/uv serves it via FastAPI).  
+The backend is in `backend/` as a uv project using FastAPI; run with `uv run uvicorn app.main:app`.  
+The database uses SQLite, created from scratch on each container start (`backend/app/database.py`). Users table exists; auth not yet implemented.  
+The frontend is in `frontend/`, statically built (`output: 'export'`) and served by FastAPI at the root.  
+Scripts are in `scripts/` for:  
 ```bash
 # Mac
 scripts/start-mac.sh    # Start
@@ -46,6 +45,27 @@ scripts/start-windows.ps1
 scripts/stop-windows.ps1
 ```
 Backend available at http://localhost:8000
+
+## Implementation Status
+
+### PL-3 — Mutual NDA Creator (done)
+- `frontend/app/page.tsx` — NDA form + live preview, download .md, print to PDF
+- `frontend/app/components/NDAForm.tsx`, `NDAPreview.tsx`
+- `frontend/app/lib/types.ts`, `download.ts`
+
+### PL-4 — V1 Technical Foundation (done, PR #4)
+- `backend/` — FastAPI uv project; SQLite DB init on startup; static file serving
+- `backend/app/main.py` — serves Next.js static output; `/api/health` endpoint
+- `backend/app/database.py` — creates `users` table from scratch each container start
+- `frontend/app/login/page.tsx` — fake login screen (no auth); Sign In navigates to `/`
+- `frontend/next.config.mjs` — `output: 'export'` for static build
+- `Dockerfile` — multi-stage: Node → static `out/`, Python/uv → FastAPI server
+- `scripts/` — start/stop for Mac, Linux, Windows
+
+### Not yet implemented
+- User authentication (sign up / sign in endpoints)
+- AI chat for document drafting
+- Support for documents beyond Mutual NDA
 
 ## Color Scheme
 - Accent Yellow: `#ecad0a`
