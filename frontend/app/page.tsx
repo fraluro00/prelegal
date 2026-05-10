@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import ChatPanel from './components/ChatPanel';
 import DocumentCatalog from './components/DocumentCatalog';
 import DocumentForm from './components/DocumentForm';
 import DocumentPreview from './components/DocumentPreview';
 import NDAForm from './components/NDAForm';
 import NDAPreview from './components/NDAPreview';
+import { API_URL, authHeaders, clearAuth, getEmail, getToken } from './lib/auth';
 import { getDocConfig, isNDADoc } from './lib/documents';
 import { downloadGenericMarkdown, downloadMarkdown } from './lib/download';
 import { DocumentFields, NDAFormData, defaultFormData } from './lib/types';
@@ -16,27 +18,73 @@ const NDA_REQUIRED: (keyof NDAFormData)[] = [
   'party1Name', 'party1Company', 'party2Name', 'party2Company',
 ];
 
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 function todayISO(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function deriveTitle(docType: string, fields: Record<string, unknown>): string {
+  const config = getDocConfig(docType);
+  const docName = config?.name ?? docType;
+  const party1 = fields.party1Company || fields.providerName || fields.companyName;
+  const party2 = fields.party2Company || fields.customerName || fields.partnerName;
+  const parties = [party1, party2].filter(Boolean);
+  if (parties.length > 0) return `${docName} — ${parties.join(' & ')}`;
+  return docName;
+}
+
 export default function Home() {
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<string | null>(null);
   const [ndaData, setNdaData] = useState<NDAFormData>({ ...defaultFormData, effectiveDate: todayISO() });
   const [genericFields, setGenericFields] = useState<DocumentFields>({});
   const [activeTab, setActiveTab] = useState<'chat' | 'fields'>('chat');
   const [showIncompleteWarning, setShowIncompleteWarning] = useState(false);
   const [pendingAction, setPendingAction] = useState<'download' | 'print' | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    setUserEmail(getEmail() || '');
+    setAuthChecked(true);
+  }, [router]);
+
+  if (!authChecked) return null;
+
+  function handleLogout() {
+    clearAuth();
+    router.push('/login');
+  }
+
+  function handleSelect(filename: string, initialFields?: Record<string, unknown>) {
+    setSelectedDoc(filename);
+    setActiveTab('chat');
+    if (initialFields) {
+      if (isNDADoc(filename)) {
+        setNdaData(initialFields as unknown as NDAFormData);
+      } else {
+        setGenericFields(initialFields as DocumentFields);
+      }
+    } else {
+      setGenericFields({});
+      setNdaData({ ...defaultFormData, effectiveDate: todayISO() });
+    }
+  }
 
   if (!selectedDoc) {
     return (
       <DocumentCatalog
-        onSelect={(filename) => {
-          setSelectedDoc(filename);
-          setGenericFields({});
-          setActiveTab('chat');
-        }}
+        onSelect={handleSelect}
+        userEmail={userEmail}
+        onLogout={handleLogout}
       />
     );
   }
@@ -75,6 +123,25 @@ export default function Home() {
     setPendingAction(null);
   }
 
+  async function handleSave() {
+    setSaveStatus('saving');
+    const fields = useNDA
+      ? (ndaData as unknown as Record<string, unknown>)
+      : (genericFields as Record<string, unknown>);
+    const title = deriveTitle(selectedDoc!, fields);
+    try {
+      const res = await fetch(`${API_URL}/api/documents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ doc_type: selectedDoc, fields, title }),
+      });
+      setSaveStatus(res.ok ? 'saved' : 'error');
+    } catch {
+      setSaveStatus('error');
+    }
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  }
+
   const chatFields = useNDA
     ? (ndaData as unknown as Record<string, unknown>)
     : (genericFields as Record<string, unknown>);
@@ -108,7 +175,37 @@ export default function Home() {
             <p className="text-xs text-gray-500">Prelegal &mdash; AI-powered document drafting</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md border transition-colors disabled:opacity-50"
+            style={
+              saveStatus === 'saved'
+                ? { borderColor: '#22c55e', color: '#16a34a', backgroundColor: '#f0fdf4' }
+                : saveStatus === 'error'
+                ? { borderColor: '#ef4444', color: '#dc2626', backgroundColor: '#fef2f2' }
+                : { borderColor: '#e5e7eb', color: '#374151', backgroundColor: '#ffffff' }
+            }
+          >
+            {saveStatus === 'saved' ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Saved
+              </>
+            ) : saveStatus === 'error' ? (
+              'Save failed'
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                {saveStatus === 'saving' ? 'Saving…' : 'Save'}
+              </>
+            )}
+          </button>
           <button
             onClick={handleDownload}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
@@ -151,7 +248,6 @@ export default function Home() {
           </div>
 
           <div className="flex-1 overflow-hidden">
-            {/* Always mounted so conversation survives tab switches */}
             <div className={activeTab === 'chat' ? 'h-full' : 'hidden'}>
               <ChatPanel
                 fields={chatFields}

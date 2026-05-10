@@ -108,8 +108,15 @@ Common Paper Mutual Non-Disclosure Agreement [Version 1.0](https://commonpaper.c
 `;
 }
 
+export const DRAFT_DISCLAIMER = `
+
+---
+
+> **Legal Disclaimer:** This document is a draft generated with AI assistance and is intended for discussion purposes only. It has not been reviewed by a licensed attorney and should not be construed as legal advice. Please consult a qualified legal professional before relying on or executing this document.
+`;
+
 export function downloadMarkdown(data: NDAFormData): void {
-  const content = generateMarkdown(data);
+  const content = generateMarkdown(data) + DRAFT_DISCLAIMER;
   triggerDownload(content, 'mutual-nda.md');
 }
 
@@ -133,7 +140,7 @@ export function downloadGenericMarkdown(config: DocumentConfig, fields: Document
   }
 
   const filename = config.filename.replace(/\.md$/, '-filled.md');
-  triggerDownload(lines.join('\n'), filename);
+  triggerDownload(lines.join('\n') + DRAFT_DISCLAIMER, filename);
 }
 
 function triggerDownload(content: string, filename: string): void {
