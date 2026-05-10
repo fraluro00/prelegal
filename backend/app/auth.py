@@ -4,8 +4,10 @@ from datetime import datetime, timedelta, timezone
 import bcrypt
 import jwt
 import psycopg2.errors
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from . import database
 
@@ -14,6 +16,7 @@ _ALGORITHM = "HS256"
 _EXPIRY_DAYS = 7
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 class RegisterRequest(BaseModel):
@@ -62,7 +65,8 @@ def get_current_user(authorization: str = Header(...)) -> int:
 
 
 @router.post("/api/auth/register", response_model=AuthResponse)
-def register(req: RegisterRequest) -> AuthResponse:
+@limiter.limit("5/minute")
+def register(request: Request, req: RegisterRequest) -> AuthResponse:
     conn = database.get_conn()
     cur = conn.cursor()
     try:
@@ -83,7 +87,8 @@ def register(req: RegisterRequest) -> AuthResponse:
 
 
 @router.post("/api/auth/login", response_model=AuthResponse)
-def login(req: LoginRequest) -> AuthResponse:
+@limiter.limit("10/minute")
+def login(request: Request, req: LoginRequest) -> AuthResponse:
     conn = database.get_conn()
     cur = conn.cursor()
     try:
