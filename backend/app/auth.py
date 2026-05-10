@@ -6,17 +6,15 @@ import jwt
 import psycopg2.errors
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from . import database
+from .limiter import limiter
 
 _SECRET = os.environ.get("JWT_SECRET", "prelegal-dev-secret")
 _ALGORITHM = "HS256"
 _EXPIRY_DAYS = 7
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 class RegisterRequest(BaseModel):

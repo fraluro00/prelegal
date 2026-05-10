@@ -5,22 +5,20 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
 from .auth import router as auth_router
 from .chat import router as chat_router
 from .database import init_db
 from .documents_router import router as documents_router
+from .limiter import limiter
 
 load_dotenv()
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
-
-limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
