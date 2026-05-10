@@ -73,5 +73,3 @@ Requires `NEXT_PUBLIC_API_URL` in `frontend/.env.local`.
 scripts/start-mac.sh    # Mac
 scripts/start-linux.sh  # Linux
 ```
-
-Backend available at http://localhost:8000.
