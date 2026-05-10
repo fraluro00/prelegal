@@ -20,15 +20,20 @@ def get_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         return forwarded.split(",")[0].strip()
-    return request.client.host or "unknown"
+    return request.client.host if request.client else "unknown"
 
 
 def rate_limit(request: Request, limit: int, window: int = 60) -> None:
-    ip = get_ip(request)
-    if _redis_client:
-        _limit_redis(ip, limit, window)
-    else:
-        _limit_memory(ip, limit, window)
+    try:
+        ip = get_ip(request)
+        if _redis_client:
+            _limit_redis(ip, limit, window)
+        else:
+            _limit_memory(ip, limit, window)
+    except HTTPException:
+        raise
+    except Exception:
+        pass  # never block a request due to rate limiter failure
 
 
 def _limit_redis(ip: str, limit: int, window: int) -> None:
