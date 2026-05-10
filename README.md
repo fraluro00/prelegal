@@ -2,14 +2,25 @@
 
 A platform for drafting common legal agreements. Provides a library of standardised legal templates and a web app for generating completed documents.
 
+**Live app:** https://prelegal-gamma.vercel.app
+
 ## Repository structure
 
 ```
 prelegal/
 ├── templates/          # Markdown legal templates (CommonPaper standards)
 ├── catalog.json        # Machine-readable index of all templates
-└── frontend/           # Next.js web application
+├── frontend/           # Next.js web application (deployed to Vercel)
+└── backend/            # FastAPI backend (deployed to Render)
 ```
+
+## Hosting
+
+| Layer | Service | URL |
+|-------|---------|-----|
+| Frontend | Vercel | https://prelegal-gamma.vercel.app |
+| Backend API | Render | https://prelegal-backend.onrender.com |
+| Database | Supabase | PostgreSQL (free tier) |
 
 ## Legal templates
 
@@ -29,41 +40,38 @@ Stored in `templates/` and indexed in `catalog.json`. All templates use the [Com
 | Business Associate Agreement | `BAA.md` |
 | AI Addendum | `AI-Addendum.md` |
 
-## Frontend — Mutual NDA Creator
-
-A split-pane web app: fill in a form on the left, see the completed NDA highlighted live on the right, then download as Markdown or print to PDF.
+## Local development
 
 ### Requirements
 
-- Node.js 18+
-- npm 9+
+- Node.js 18+, npm 9+
+- Python 3.11+, uv
+- PostgreSQL (or use Supabase)
 
-### Setup
+### Backend
+
+```bash
+cd backend
+uv run uvicorn app.main:app --reload
+```
+
+Requires `DATABASE_URL`, `JWT_SECRET`, and `OPENROUTER_API_KEY` in `.env`.
+
+### Frontend
 
 ```bash
 cd frontend
 npm install
-```
-
-### Running locally
-
-```bash
 npm run dev       # starts dev server at http://localhost:3000
-npm run build     # production build
-npm start         # serve production build
 ```
 
-### Testing
+Requires `NEXT_PUBLIC_API_URL` in `frontend/.env.local`.
+
+### Docker (full stack)
 
 ```bash
-npm test              # Jest unit + component tests (78 tests)
-npm run test:watch    # Jest in watch mode
-npm run test:e2e      # Playwright end-to-end tests (15 tests, starts dev server automatically)
-npm run test:e2e:ui   # Playwright with interactive UI
+scripts/start-mac.sh    # Mac
+scripts/start-linux.sh  # Linux
 ```
 
-Playwright requires Chromium. Install it once with:
-
-```bash
-npx playwright install chromium
-```
+Backend available at http://localhost:8000.
