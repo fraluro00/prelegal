@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation. PL-5 replaced the static form with an AI chat interface. PL-6 expanded to all 12 supported document types with a catalog landing page. PL-7 added real authentication, per-user document history, draft disclaimers, and UI polish.
+The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation. PL-5 replaced the static form with an AI chat interface. PL-6 expanded to all 12 supported document types with a catalog landing page. PL-7 added real authentication, per-user document history, draft disclaimers, and UI polish. PL-8 migrated hosting to Render + Vercel + Supabase and hardened security.
 
 ## Development process
 
@@ -26,11 +26,18 @@ There is an OPENROUTER_API_KEY in the .env file in the project root.
 
 ## Technical design
 
-The entire project is packaged into a Docker container (multi-stage build: Node builds static frontend, Python/uv serves it via FastAPI).  
+### Hosting (production)
+- Frontend: Vercel — https://prelegal-gamma.vercel.app (Next.js static export)
+- Backend: Render free tier — Docker container (`backend/Dockerfile`), auto-deploys on push to `main`
+- Database: Supabase PostgreSQL free tier — tables auto-created on startup via `init_db()`
+- Rate limit state: Upstash Redis free tier — shared across restarts via `REDIS_URL` env var
+
+### Local development
+The root `Dockerfile` is a multi-stage build (Node builds static frontend, Python/uv serves it via FastAPI) for running the full stack locally.  
 The backend is in `backend/` as a uv project using FastAPI; run with `uv run uvicorn app.main:app`.  
-The database uses SQLite, created from scratch on each container start (`backend/app/database.py`). Has `users` and `documents` tables. Auth uses bcrypt + PyJWT (Bearer tokens, 7-day expiry). JWT `sub` must be a string (PyJWT 2.12+ requirement).  
-The frontend is in `frontend/`, statically built (`output: 'export'`) and served by FastAPI at the root.  
-Scripts are in `scripts/` for:  
+The database uses PostgreSQL via `DATABASE_URL` env var. Has `users` and `documents` tables. Auth uses bcrypt + PyJWT (Bearer tokens, 7-day expiry). JWT `sub` must be a string (PyJWT 2.12+ requirement).  
+The frontend is in `frontend/`, statically built (`output: 'export'`).  
+Scripts are in `scripts/` for:
 ```bash
 # Mac
 scripts/start-mac.sh    # Start
@@ -44,7 +51,19 @@ scripts/stop-linux.sh
 scripts/start-windows.ps1
 scripts/stop-windows.ps1
 ```
-Backend available at http://localhost:8000
+
+### Required env vars (Render)
+- `DATABASE_URL` — Supabase PostgreSQL connection string (session pooler, port 5432)
+- `JWT_SECRET` — random hex string for signing JWTs
+- `OPENROUTER_API_KEY` — OpenRouter API key for LLM calls
+- `ALLOWED_ORIGINS` — comma-separated allowed CORS origins (default: `https://prelegal-gamma.vercel.app`)
+- `REDIS_URL` — Upstash Redis URL for rate limiting (falls back to in-memory if unset)
+
+### Security
+- CORS restricted to `ALLOWED_ORIGINS` env var
+- Rate limiting: 10 req/min on `/api/auth/login`, 5 req/min on `/api/auth/register`
+- Rate limit state stored in Redis (persistent across restarts); falls back to in-memory if Redis unavailable
+- `backend/app/limiter.py` — `rate_limit(request, limit)` called explicitly at top of each auth handler
 
 ## Implementation Status
 
@@ -93,8 +112,18 @@ Backend available at http://localhost:8000
 - `frontend/app/components/DocumentPreview.tsx`, `NDAPreview.tsx` — amber draft disclaimer banner
 - `frontend/app/lib/download.ts` — legal disclaimer appended to all downloaded `.md` files
 
+### PL-8 — Hosting Migration + Security Hardening (done)
+- Migrated from Railway (trial) to Render (free tier, permanent)
+- Database migrated from SQLite to Supabase PostgreSQL (`backend/app/database.py` uses `psycopg2` + `DATABASE_URL`)
+- `backend/Dockerfile` — backend-only Docker build for Render (paths relative to repo root)
+- `render.yaml` — Render service config
+- `frontend/vercel.json` — Vercel deployment config
+- `backend/app/main.py` — CORS middleware restricted to `ALLOWED_ORIGINS` env var
+- `backend/app/limiter.py` — Redis-backed sliding window rate limiter with in-memory fallback
+- `backend/app/auth.py` — rate limiting applied to `/api/auth/login` (10/min) and `/api/auth/register` (5/min)
+
 ### Not yet implemented
-- Nothing — all planned features through PL-7 are complete
+- Nothing — all planned features through PL-8 are complete
 
 ## Color Scheme
 - Accent Yellow: `#ecad0a`
