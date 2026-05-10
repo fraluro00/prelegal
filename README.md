@@ -16,11 +16,11 @@ prelegal/
 
 ## Hosting
 
-| Layer | Service | URL |
-|-------|---------|-----|
-| Frontend | Vercel | https://prelegal-gamma.vercel.app |
-| Backend API | Render | https://prelegal-backend.onrender.com |
-| Database | Supabase | PostgreSQL (free tier) |
+| Layer | Service |
+|-------|---------|
+| Frontend | Vercel — https://prelegal-gamma.vercel.app |
+| Backend API | Render |
+| Database | Supabase (PostgreSQL) |
 
 ## Legal templates
 
