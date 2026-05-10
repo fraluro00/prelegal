@@ -8,7 +8,7 @@ The available documents are covered in the catalog.json file in the project root
 
 @catalog.json
 
-The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation. PL-5 replaced the static form with an AI chat interface. PL-6 expanded to all 12 supported document types with a catalog landing page.
+The initial prototype was frontend-only, supporting Mutual NDA with no AI chat. PL-4 added the full V1 technical foundation. PL-5 replaced the static form with an AI chat interface. PL-6 expanded to all 12 supported document types with a catalog landing page. PL-7 added real authentication, per-user document history, draft disclaimers, and UI polish.
 
 ## Development process
 
@@ -28,7 +28,7 @@ There is an OPENROUTER_API_KEY in the .env file in the project root.
 
 The entire project is packaged into a Docker container (multi-stage build: Node builds static frontend, Python/uv serves it via FastAPI).  
 The backend is in `backend/` as a uv project using FastAPI; run with `uv run uvicorn app.main:app`.  
-The database uses SQLite, created from scratch on each container start (`backend/app/database.py`). Users table exists; auth not yet implemented.  
+The database uses SQLite, created from scratch on each container start (`backend/app/database.py`). Has `users` and `documents` tables. Auth uses bcrypt + PyJWT (Bearer tokens, 7-day expiry). JWT `sub` must be a string (PyJWT 2.12+ requirement).  
 The frontend is in `frontend/`, statically built (`output: 'export'`) and served by FastAPI at the root.  
 Scripts are in `scripts/` for:  
 ```bash
@@ -80,8 +80,21 @@ Backend available at http://localhost:8000
 - AI handles unsupported document requests by explaining and suggesting the closest supported alternative
 - NDA retains its rich custom preview (`NDAPreview`) and full markdown download; all other docs use the generic components
 
+### PL-7 — Auth, Document History, Polish (done, PR #7)
+- `backend/app/auth.py` — `POST /api/auth/register`, `POST /api/auth/login`; bcrypt hashing; PyJWT Bearer tokens; `get_current_user` FastAPI dependency
+- `backend/app/documents_router.py` — `POST/GET/DELETE /api/documents`; documents scoped per user; `GET /api/documents/{id}` returns full fields JSON
+- `backend/app/database.py` — added `documents` table (user_id, doc_type, fields_json, title, created_at)
+- `backend/tests/` — 14 pytest tests covering auth endpoints and document CRUD
+- `frontend/app/lib/auth.ts` — `getToken/setAuth/clearAuth/authHeaders` utilities (localStorage with SSR guard)
+- `frontend/app/login/page.tsx` — real `POST /api/auth/login`; two-column brand layout (dark navy left, form right)
+- `frontend/app/signup/page.tsx` — new sign-up page; `POST /api/auth/register`; same two-column layout
+- `frontend/app/page.tsx` — auth guard (redirects to `/login` if no token); Save button with status feedback; loads saved doc fields when resuming from catalog
+- `frontend/app/components/DocumentCatalog.tsx` — "My Documents" section at top (fetched on mount); user avatar + logout in header; saved doc rows open pre-filled editor
+- `frontend/app/components/DocumentPreview.tsx`, `NDAPreview.tsx` — amber draft disclaimer banner
+- `frontend/app/lib/download.ts` — legal disclaimer appended to all downloaded `.md` files
+
 ### Not yet implemented
-- User authentication (sign up / sign in endpoints)
+- Nothing — all planned features through PL-7 are complete
 
 ## Color Scheme
 - Accent Yellow: `#ecad0a`
