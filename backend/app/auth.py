@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from . import database
-from .limiter import limiter
+from .limiter import rate_limit
 
 _SECRET = os.environ.get("JWT_SECRET", "prelegal-dev-secret")
 _ALGORITHM = "HS256"
@@ -63,8 +63,8 @@ def get_current_user(authorization: str = Header(...)) -> int:
 
 
 @router.post("/api/auth/register", response_model=AuthResponse)
-@limiter.limit("5/minute")
 def register(request: Request, req: RegisterRequest) -> AuthResponse:
+    rate_limit(request, limit=5)
     conn = database.get_conn()
     cur = conn.cursor()
     try:
@@ -85,8 +85,8 @@ def register(request: Request, req: RegisterRequest) -> AuthResponse:
 
 
 @router.post("/api/auth/login", response_model=AuthResponse)
-@limiter.limit("10/minute")
 def login(request: Request, req: LoginRequest) -> AuthResponse:
+    rate_limit(request, limit=10)
     conn = database.get_conn()
     cur = conn.cursor()
     try:

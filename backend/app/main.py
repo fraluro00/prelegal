@@ -7,14 +7,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
 
 from .auth import router as auth_router
 from .chat import router as chat_router
 from .database import init_db
 from .documents_router import router as documents_router
-from .limiter import limiter
 
 load_dotenv()
 
@@ -28,8 +25,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 allowed_origins = os.environ.get(
     "ALLOWED_ORIGINS", "https://prelegal-gamma.vercel.app"
