@@ -12,6 +12,7 @@ from .auth import router as auth_router
 from .chat import router as chat_router
 from .database import init_db
 from .documents_router import router as documents_router
+from .limiter import init_redis
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ STATIC_DIR = Path(__file__).parent.parent / "static"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    init_redis()
     yield
 
 
