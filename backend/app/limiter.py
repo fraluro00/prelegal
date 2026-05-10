@@ -32,13 +32,18 @@ def rate_limit(request: Request, limit: int, window: int = 60) -> None:
 
 
 def _limit_redis(ip: str, limit: int, window: int) -> None:
-    key = f"rl:{ip}"
-    pipe = _redis_client.pipeline()
-    pipe.incr(key)
-    pipe.expire(key, window)
-    count, _ = pipe.execute()
-    if count > limit:
-        raise HTTPException(status_code=429, detail="Too many requests")
+    try:
+        key = f"rl:{ip}"
+        pipe = _redis_client.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, window)
+        count, _ = pipe.execute()
+        if count > limit:
+            raise HTTPException(status_code=429, detail="Too many requests")
+    except HTTPException:
+        raise
+    except Exception:
+        _limit_memory(ip, limit, window)
 
 
 def _limit_memory(ip: str, limit: int, window: int) -> None:
