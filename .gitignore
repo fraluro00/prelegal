@@ -17,6 +17,8 @@ develop-eggs/
 .installed.cfg
 lib/
 lib64/
+!frontend/app/lib/
+!frontend/app/lib/**
 .eggs/
 
 # Virtual environments
@@ -124,3 +126,4 @@ Desktop.ini
 *.crt
 secrets/
 .claude/settings.local.json
+.mcp.json

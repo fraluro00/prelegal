@@ -1,9 +1,9 @@
 import os
-import sqlite3
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
+import psycopg2.errors
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
@@ -63,31 +63,37 @@ def get_current_user(authorization: str = Header(...)) -> int:
 
 @router.post("/api/auth/register", response_model=AuthResponse)
 def register(req: RegisterRequest) -> AuthResponse:
-    conn = sqlite3.connect(database.DB_PATH)
+    conn = database.get_conn()
+    cur = conn.cursor()
     try:
         password_hash = _hash_password(req.password)
-        cursor = conn.execute(
-            "INSERT INTO users (email, password_hash) VALUES (?, ?)",
+        cur.execute(
+            "INSERT INTO users (email, password_hash) VALUES (%s, %s) RETURNING id",
             (req.email, password_hash),
         )
+        user_id = cur.fetchone()[0]
         conn.commit()
-        user_id = cursor.lastrowid
-    except sqlite3.IntegrityError:
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
         raise HTTPException(status_code=409, detail="Email already registered")
     finally:
+        cur.close()
         conn.close()
     return AuthResponse(token=_make_token(user_id), email=req.email)
 
 
 @router.post("/api/auth/login", response_model=AuthResponse)
 def login(req: LoginRequest) -> AuthResponse:
-    conn = sqlite3.connect(database.DB_PATH)
+    conn = database.get_conn()
+    cur = conn.cursor()
     try:
-        row = conn.execute(
-            "SELECT id, email, password_hash FROM users WHERE email = ?",
+        cur.execute(
+            "SELECT id, email, password_hash FROM users WHERE email = %s",
             (req.email,),
-        ).fetchone()
+        )
+        row = cur.fetchone()
     finally:
+        cur.close()
         conn.close()
     if not row or not _verify_password(req.password, row[2]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
